@@ -1,0 +1,70 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  *,
+  *::before,
+  *::after {
+    border-radius: 0 !important;
+  }
+
+  input:not([type="checkbox"]):not([type="radio"]):not([type="color"]):not([type="file"]):not([type="submit"]):not([type="button"]):not([type="reset"]),
+  select,
+  textarea {
+    background-color: #09090b;
+    color: #f4f4f5;
+    border-color: #27272a;
+  }
+
+  input:not([type="checkbox"]):not([type="radio"]):not([type="color"]):not([type="file"]):not([type="submit"]):not([type="button"]):not([type="reset"]):focus,
+  select:focus,
+  textarea:focus {
+    border-color: #71717a;
+    outline: none;
+  }
+
+  input::placeholder,
+  textarea::placeholder {
+    color: #71717a;
+    opacity: 1;
+  }
+
+  /* Browser autofill styling override to prevent white background / invisible text */
+  input:-webkit-autofill,
+  input:-webkit-autofill:hover,
+  input:-webkit-autofill:focus,
+  textarea:-webkit-autofill,
+  textarea:-webkit-autofill:hover,
+  textarea:-webkit-autofill:focus,
+  select:-webkit-autofill,
+  select:-webkit-autofill:hover,
+  select:-webkit-autofill:focus {
+    -webkit-text-fill-color: #f4f4f5 !important;
+    -webkit-box-shadow: 0 0 0px 1000px #09090b inset !important;
+    box-shadow: 0 0 0px 1000px #09090b inset !important;
+    transition: background-color 5000s ease-in-out 0s;
+  }
+}
+
+body {
+  margin: 0;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  background-color: #09090b;
+  color: #f4f4f5;
+}
+
+/* Custom scrollbars in grey/black */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: #09090b;
+}
+::-webkit-scrollbar-thumb {
+  background: #27272a;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #3f3f46;
+}

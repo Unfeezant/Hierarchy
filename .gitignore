@@ -1,0 +1,53 @@
+# Dependencies
+node_modules/
+*/node_modules/
+.pnp
+.pnp.js
+
+# Environment variables & secrets (CRITICAL: never commit secrets)
+.env
+.env.*
+!.env.example
+server/.env
+server/.env.*
+!server/.env.example
+client/.env
+client/.env.*
+!client/.env.example
+
+# SQLite Database & Local Data
+data/
+server/data/
+*.db
+*.db-journal
+*.db-wal
+*.db-shm
+uploads/
+server/uploads/
+write-file.js
+
+# Build artifacts
+dist/
+client/dist/
+server/dist/
+build/
+*.tsbuildinfo
+
+# Logs & Debugging
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Editor & OS files
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
