@@ -204,6 +204,7 @@ router.get("/smtp-status", requirePermission("role:manage"), async (req, res) =>
   res.json({
     configured: isConfigured,
     host,
+    port: verification.port || process.env.SMTP_PORT || null,
     user,
     from,
     verified: verification.success,

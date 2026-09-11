@@ -10,79 +10,102 @@ export interface SendEmailOptions {
 }
 
 export class EmailService {
-  private transporter: Transporter | null = null;
   private devLogPath: string;
-  private lastHost?: string;
-  private lastUser?: string;
-  private lastPass?: string;
-  private lastPort?: number;
+  private workingPort?: number;
+  private transporterCache = new Map<number, Transporter>();
 
   constructor() {
     this.devLogPath = path.resolve(process.cwd(), "email_dispatches.log");
   }
 
-  getTransporter(): Transporter | null {
-    const host = process.env.SMTP_HOST;
-    const port = parseInt(process.env.SMTP_PORT || "587", 10);
+  isSmtpConfigured(): boolean {
+    const user = process.env.SMTP_USER;
+    const pass = process.env.SMTP_PASS;
+    return Boolean(user && pass);
+  }
+
+  private createTransporter(port: number): Transporter | null {
+    const host = process.env.SMTP_HOST || "smtp-relay.brevo.com";
     const user = process.env.SMTP_USER;
     const pass = process.env.SMTP_PASS;
 
-    if (!host || !user || !pass) {
+    if (!user || !pass) {
       return null;
     }
 
-    if (
-      !this.transporter ||
-      this.lastHost !== host ||
-      this.lastUser !== user ||
-      this.lastPass !== pass ||
-      this.lastPort !== port
-    ) {
-      this.lastHost = host;
-      this.lastUser = user;
-      this.lastPass = pass;
-      this.lastPort = port;
-      this.transporter = nodemailer.createTransport({
-        host,
-        port,
-        secure: process.env.SMTP_SECURE === "true" || port === 465,
-        auth: { user, pass },
-        connectionTimeout: 4000,
-        greetingTimeout: 4000,
-        socketTimeout: 4000,
-      });
-    }
+    const isSecure = process.env.SMTP_SECURE === "true" || port === 465;
 
-    return this.transporter;
+    return nodemailer.createTransport({
+      host,
+      port,
+      secure: isSecure,
+      auth: { user, pass },
+      connectionTimeout: 4000,
+      greetingTimeout: 4000,
+      socketTimeout: 4000,
+    });
   }
 
-  isSmtpConfigured(): boolean {
-    return this.getTransporter() !== null;
+  private getCandidatePorts(): number[] {
+    const configuredPort = parseInt(process.env.SMTP_PORT || "2525", 10);
+    // Try 2525 and 465 first on cloud hosts since 587 is often blocked on free-tier firewalls
+    const ports = this.workingPort 
+      ? [this.workingPort, configuredPort, 2525, 465, 587]
+      : [configuredPort, 2525, 465, 587];
+    return Array.from(new Set(ports));
   }
 
-  async verifyConnection(): Promise<{ success: boolean; error?: string }> {
-    const transporter = this.getTransporter();
-    if (!transporter) {
-      return { success: false, error: "SMTP credentials not configured in environment (SMTP_HOST, SMTP_USER, SMTP_PASS)" };
+  async verifyConnection(): Promise<{ success: boolean; port?: number; error?: string }> {
+    if (!this.isSmtpConfigured()) {
+      return { 
+        success: false, 
+        error: "SMTP credentials not configured in environment (SMTP_USER, SMTP_PASS)" 
+      };
     }
-    try {
-      await transporter.verify();
-      return { success: true };
-    } catch (err: any) {
-      return { success: false, error: err.message || "Failed to verify SMTP credentials" };
+
+    const candidatePorts = this.getCandidatePorts();
+    let lastError = "Connection timeout";
+
+    for (const port of candidatePorts) {
+      try {
+        const transporter = this.createTransporter(port);
+        if (!transporter) continue;
+        console.log(`[SMTP] Attempting verification on port ${port}...`);
+        await transporter.verify();
+        this.workingPort = port;
+        console.log(`\x1b[32m[SMTP VERIFIED]\x1b[0m Successfully connected via port ${port}`);
+        return { success: true, port };
+      } catch (err: any) {
+        lastError = `${err.message} (port ${port})`;
+        console.warn(`[SMTP] Port ${port} failed or timed out: ${err.message}`);
+      }
     }
+
+    return { success: false, error: lastError };
   }
 
   async sendMail(options: SendEmailOptions): Promise<boolean> {
-    const fromAddress = process.env.SMTP_FROM || '"Hierarchy Pyramid System" <noreply@unthink.io>';
+    const fromAddress = process.env.SMTP_FROM || '"Hierarchy Enterprise" <noreply@unthink.io>';
     const timestamp = new Date().toISOString();
-    const transporter = this.getTransporter();
 
-    let smtpStatus = "DEV_MODE (Logged locally)";
+    if (!this.isSmtpConfigured()) {
+      const logEntry = `[EMAIL DISPATCH - ${timestamp}] [DEV_MODE]\nTo: ${options.to}\nSubject: ${options.subject}\nContent:\n${options.text}\n----------------------------------------\n`;
+      console.log(`\x1b[36m[EMAIL DISPATCH - DEV_MODE]\x1b[0m To: ${options.to} | Subject: ${options.subject}`);
+      try { fs.appendFileSync(this.devLogPath, logEntry, "utf8"); } catch {}
+      return false;
+    }
+
+    const candidatePorts = this.getCandidatePorts();
     let isSuccess = false;
+    let successfulPort: number | undefined;
+    let lastError: string | undefined;
 
-    if (transporter) {
+    for (const port of candidatePorts) {
       try {
+        const transporter = this.createTransporter(port);
+        if (!transporter) continue;
+
+        console.log(`[SMTP] Dispatching email to ${options.to} via port ${port}...`);
         const info = await transporter.sendMail({
           from: fromAddress,
           to: options.to,
@@ -90,23 +113,24 @@ export class EmailService {
           text: options.text,
           html: options.html,
         });
-        smtpStatus = `LIVE_SMTP_SENT (MessageId: ${info.messageId})`;
+
         isSuccess = true;
-        console.log(`\x1b[32m[EMAIL SMTP SUCCESS]\x1b[0m Sent to ${options.to} (ID: ${info.messageId})`);
+        successfulPort = port;
+        this.workingPort = port;
+        console.log(`\x1b[32m[EMAIL SMTP SUCCESS]\x1b[0m Sent to ${options.to} via port ${port} (ID: ${info.messageId})`);
+        break;
       } catch (error: any) {
-        smtpStatus = `LIVE_SMTP_FAILED (${error.message})`;
-        console.error(`\x1b[31m[EMAIL SMTP ERROR]\x1b[0m Failed to send email via SMTP to ${options.to}:`, error.message);
+        lastError = `${error.message} (port ${port})`;
+        console.warn(`[EMAIL SMTP WARN] Port ${port} failed: ${error.message}. Trying alternative port...`);
       }
     }
 
-    // Development / Local environment logging
+    const smtpStatus = isSuccess 
+      ? `LIVE_SMTP_SENT (Port: ${successfulPort})` 
+      : `LIVE_SMTP_FAILED (${lastError})`;
+
     const logEntry = `[EMAIL DISPATCH - ${timestamp}] [${smtpStatus}]\nTo: ${options.to}\nSubject: ${options.subject}\nContent:\n${options.text}\n----------------------------------------\n`;
-    console.log(`\x1b[36m[EMAIL DISPATCH]\x1b[0m To: ${options.to} | Subject: ${options.subject} | Status: ${smtpStatus}`);
-    try {
-      fs.appendFileSync(this.devLogPath, logEntry, "utf8");
-    } catch {
-      // Ignore file append error in isolated environments
-    }
+    try { fs.appendFileSync(this.devLogPath, logEntry, "utf8"); } catch {}
 
     return isSuccess;
   }
@@ -143,7 +167,7 @@ export class EmailService {
   }
 
   async sendInvitation(email: string, roleName: string, inviterName: string): Promise<boolean> {
-    const appUrl = process.env.APP_URL || "http://localhost:5173";
+    const appUrl = process.env.APP_URL || "https://unfeezant.github.io/Hierarchy/";
     const subject = `You have been invited to Hierarchy Pyramid by ${inviterName}`;
 
     const text = `Hello,\n\n${inviterName} has invited you to join the Hierarchy Pyramid system as "${roleName}".\n\nTo access the system and activate your administrator profile, visit:\n${appUrl}\n\nOn the sign-in page, select "EMAIL OTP", enter your corporate email (${email}), and you will receive your personal sign-in passcode to complete setup.\n\nThis invitation is valid for 7 days.`;
