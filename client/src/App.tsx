@@ -132,9 +132,20 @@ const MainLayout: React.FC = () => {
     );
   }
 
+  const isGuest = currentUser?.role?.id === "role_guest" || currentUser?.role?.name === "Guest";
+  const canConfigureLevels = !isGuest && (currentUser?.role?.name === "Super Admin" || currentUser?.role?.permissions.includes("level:edit") || currentUser?.role?.permissions.includes("level:create"));
+
+  useEffect(() => {
+    if (isGuest && (currentTab === "designer" || currentTab === "audit" || currentTab === "sql" || currentTab === "admin")) {
+      setCurrentTab("explorer");
+    }
+  }, [isGuest, currentTab]);
+
   const handleTabChange = (tab: NavTab) => {
     if (tab === "presets") {
-      setShowPresetsModal(true);
+      if (!isGuest) setShowPresetsModal(true);
+    } else if (isGuest && (tab === "designer" || tab === "audit" || tab === "sql" || tab === "admin")) {
+      return;
     } else {
       setCurrentTab(tab);
     }
@@ -210,18 +221,18 @@ const MainLayout: React.FC = () => {
 
           {currentTab === "explorer" && <ExplorerPage />}
 
-          {currentTab === "designer" && (
+          {currentTab === "designer" && canConfigureLevels && (
             <HierarchyDesigner
               onOpenAddColumn={handleOpenAddColumnFromDesigner}
               onOpenEditColumn={handleOpenEditColumnFromDesigner}
             />
           )}
 
-          {currentTab === "audit" && <AuditLogView />}
+          {currentTab === "audit" && !isGuest && <AuditLogView />}
 
-          {currentTab === "sql" && <LiveSqlInspector />}
+          {currentTab === "sql" && !isGuest && <LiveSqlInspector />}
 
-          {currentTab === "admin" && (
+          {currentTab === "admin" && !isGuest && (
             <AdminManagementView hierarchies={hierarchies} />
           )}
 

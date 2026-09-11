@@ -33,11 +33,15 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
   onNavigateLevelTable,
   onOpenAi
 }) => {
-  const { currentHierarchy, levels, selectMember, setViewMode } = useApp();
+  const { currentHierarchy, levels, selectMember, setViewMode, currentUser } = useApp();
   const [query, setQuery] = useState("");
   const [memberResults, setMemberResults] = useState<any[]>([]);
   const [isSearching, setIsSearching] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
+
+  const isGuest = currentUser?.role?.id === "role_guest" || currentUser?.role?.name === "Guest";
+  const canConfigureLevels = !isGuest && (currentUser?.role?.name === "Super Admin" || (currentUser?.role?.permissions?.includes("level:edit") ?? false) || (currentUser?.role?.permissions?.includes("level:create") ?? false));
+  const canViewAudit = !isGuest && (currentUser?.role?.name === "Super Admin" || (currentUser?.role?.permissions?.includes("audit:view") ?? false));
 
   useEffect(() => {
     if (isOpen) {
@@ -219,36 +223,42 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
               <Layers className="w-4 h-4 text-zinc-500" />
               <span>Open Pyramid Tiers View</span>
             </button>
-            <button
-              onClick={() => {
-                onOpenAi();
-                onClose();
-              }}
-              className="w-full text-left px-3 py-2 hover:bg-zinc-800 flex items-center space-x-2.5 text-xs text-zinc-200 hover:text-white font-semibold transition cursor-pointer"
-            >
-              <Sparkles className="w-4 h-4 text-zinc-400" />
-              <span>Open AI Assistant &amp; Point Finder</span>
-            </button>
-            <button
-              onClick={() => {
-                onNavigateTab("designer");
-                onClose();
-              }}
-              className="w-full text-left px-3 py-2 hover:bg-zinc-800 flex items-center space-x-2.5 text-xs text-zinc-300 hover:text-white transition cursor-pointer"
-            >
-              <Sliders className="w-4 h-4 text-zinc-500" />
-              <span>Configure Hierarchy Levels &amp; Schema</span>
-            </button>
-            <button
-              onClick={() => {
-                onNavigateTab("audit");
-                onClose();
-              }}
-              className="w-full text-left px-3 py-2 hover:bg-zinc-800 flex items-center space-x-2.5 text-xs text-zinc-300 hover:text-white transition cursor-pointer"
-            >
-              <Shield className="w-4 h-4 text-zinc-500" />
-              <span>View Append-Only Security Audit Trail</span>
-            </button>
+            {!isGuest && (
+              <button
+                onClick={() => {
+                  onOpenAi();
+                  onClose();
+                }}
+                className="w-full text-left px-3 py-2 hover:bg-zinc-800 flex items-center space-x-2.5 text-xs text-zinc-200 hover:text-white font-semibold transition cursor-pointer"
+              >
+                <Sparkles className="w-4 h-4 text-zinc-400" />
+                <span>Open AI Assistant &amp; Point Finder</span>
+              </button>
+            )}
+            {canConfigureLevels && (
+              <button
+                onClick={() => {
+                  onNavigateTab("designer");
+                  onClose();
+                }}
+                className="w-full text-left px-3 py-2 hover:bg-zinc-800 flex items-center space-x-2.5 text-xs text-zinc-300 hover:text-white transition cursor-pointer"
+              >
+                <Sliders className="w-4 h-4 text-zinc-500" />
+                <span>Configure Hierarchy Levels &amp; Schema</span>
+              </button>
+            )}
+            {canViewAudit && (
+              <button
+                onClick={() => {
+                  onNavigateTab("audit");
+                  onClose();
+                }}
+                className="w-full text-left px-3 py-2 hover:bg-zinc-800 flex items-center space-x-2.5 text-xs text-zinc-300 hover:text-white transition cursor-pointer"
+              >
+                <Shield className="w-4 h-4 text-zinc-500" />
+                <span>View Append-Only Security Audit Trail</span>
+              </button>
+            )}
           </div>
         </div>
 

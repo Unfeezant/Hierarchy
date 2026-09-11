@@ -47,10 +47,11 @@ const TreeNode: React.FC<TreeNodeProps> = ({
   const [hasLoaded, setHasLoaded] = useState<boolean>(false);
 
   const isSelected = activeMember?.id === member.id;
-  const canCreate = currentUser?.role.name === "Super Admin" || currentUser?.role.permissions.includes("member:create");
-  const canEdit = currentUser?.role.name === "Super Admin" || currentUser?.role.permissions.includes("member:edit");
-  const canMove = currentUser?.role.name === "Super Admin" || currentUser?.role.permissions.includes("member:move");
-  const canDelete = currentUser?.role.name === "Super Admin" || currentUser?.role.permissions.includes("member:delete");
+  const isGuest = currentUser?.role?.id === "role_guest" || currentUser?.role?.name === "Guest";
+  const canCreate = currentUser?.role?.name === "Super Admin" || (currentUser?.role?.permissions?.includes("member:create") ?? false);
+  const canEdit = currentUser?.role?.name === "Super Admin" || (currentUser?.role?.permissions?.includes("member:edit") ?? false);
+  const canMove = !isGuest && (currentUser?.role?.name === "Super Admin" || (currentUser?.role?.permissions?.includes("member:move") ?? false));
+  const canDelete = !isGuest && (currentUser?.role?.name === "Super Admin" || (currentUser?.role?.permissions?.includes("member:delete") ?? false));
 
   const toggleExpand = async (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -247,7 +248,7 @@ export const TreeView: React.FC<TreeViewProps> = ({
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState<Member[] | null>(null);
 
-  const canCreate = currentUser?.role.name === "Super Admin" || currentUser?.role.permissions.includes("member:create");
+  const canCreate = currentUser?.role?.name === "Super Admin" || (currentUser?.role?.permissions?.includes("member:create") ?? false);
 
   const loadRoots = async () => {
     if (!currentHierarchy) return;
@@ -338,7 +339,7 @@ export const TreeView: React.FC<TreeViewProps> = ({
               title="Add a top-level root record"
             >
               <Plus className="w-3.5 h-3.5" />
-              <span>+ Add Root</span>
+              <span>Add Root</span>
             </button>
           )}
         </div>

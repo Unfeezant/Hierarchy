@@ -29,6 +29,10 @@ export const HierarchyDesigner: React.FC<HierarchyDesignerProps> = ({ onOpenAddC
   const [fields, setFields] = useState<FieldDefinition[]>([]);
   const [isLoadingFields, setIsLoadingFields] = useState(false);
 
+  const isGuest = currentUser?.role?.id === "role_guest" || currentUser?.role?.name === "Guest";
+  const canManageLevels = !isGuest && (currentUser?.role?.name === "Super Admin" || (currentUser?.role?.permissions?.includes("level:edit") ?? false) || (currentUser?.role?.permissions?.includes("level:create") ?? false));
+  const canManageFields = !isGuest && (currentUser?.role?.name === "Super Admin" || (currentUser?.role?.permissions?.includes("field:manage") ?? false) || (currentUser?.role?.permissions?.includes("field:create") ?? false));
+
   // Level modal state (for both Add and Edit)
   const [showAddLevelModal, setShowAddLevelModal] = useState(false);
   const [editingLevel, setEditingLevel] = useState<Level | null>(null);
@@ -195,13 +199,15 @@ export const HierarchyDesigner: React.FC<HierarchyDesignerProps> = ({ onOpenAddC
           </p>
         </div>
 
-        <button
-          onClick={handleOpenAddLevel}
-          className="px-4 py-2 rounded-xl bg-zinc-100 hover:bg-white text-zinc-950 font-bold border border-zinc-200 font-bold text-xs flex items-center space-x-1.5 shadow-sm shadow-indigo-200 transition"
-        >
-          <Plus className="w-4 h-4" />
-          <span>+ Add New Level</span>
-        </button>
+        {canManageLevels && (
+          <button
+            onClick={handleOpenAddLevel}
+            className="px-4 py-2 rounded-xl bg-zinc-100 hover:bg-white text-zinc-950 font-bold border border-zinc-200 text-xs flex items-center space-x-1.5 shadow-sm shadow-indigo-200 transition"
+          >
+            <Plus className="w-4 h-4" />
+            <span>Add New Level</span>
+          </button>
+        )}
       </div>
 
       {/* Two Column Layout: Levels on Left, Schema Details on Right */}
@@ -255,38 +261,40 @@ export const HierarchyDesigner: React.FC<HierarchyDesignerProps> = ({ onOpenAddC
                   </div>
 
                   {/* Reorder, Edit, and Delete Controls */}
-                  <div className="flex items-center space-x-1 shrink-0" onClick={e => e.stopPropagation()}>
-                    <button
-                      onClick={() => handleOpenEditLevel(lvl)}
-                      className="p-1 rounded hover:bg-slate-200 text-zinc-500 hover:text-zinc-200 transition"
-                      title="Edit Level & Branching Rules"
-                    >
-                      <Edit2 className="w-3.5 h-3.5" />
-                    </button>
-                    <button
-                      disabled={index === 0}
-                      onClick={() => handleMoveLevel(index, "up")}
-                      className="p-1 rounded hover:bg-slate-200 text-zinc-500 disabled:opacity-20"
-                      title="Move Up"
-                    >
-                      <ArrowUp className="w-3.5 h-3.5" />
-                    </button>
-                    <button
-                      disabled={index === levels.length - 1}
-                      onClick={() => handleMoveLevel(index, "down")}
-                      className="p-1 rounded hover:bg-slate-200 text-zinc-500 disabled:opacity-20"
-                      title="Move Down"
-                    >
-                      <ArrowDown className="w-3.5 h-3.5" />
-                    </button>
-                    <button
-                      onClick={() => handleDeleteLevel(lvl)}
-                      className="p-1 rounded hover:bg-rose-50 text-zinc-500 hover:text-rose-600"
-                      title="Delete Level"
-                    >
-                      <Trash2 className="w-3.5 h-3.5" />
-                    </button>
-                  </div>
+                  {canManageLevels && (
+                    <div className="flex items-center space-x-1 shrink-0" onClick={e => e.stopPropagation()}>
+                      <button
+                        onClick={() => handleOpenEditLevel(lvl)}
+                        className="p-1 rounded hover:bg-slate-200 text-zinc-500 hover:text-zinc-200 transition"
+                        title="Edit Level & Branching Rules"
+                      >
+                        <Edit2 className="w-3.5 h-3.5" />
+                      </button>
+                      <button
+                        disabled={index === 0}
+                        onClick={() => handleMoveLevel(index, "up")}
+                        className="p-1 rounded hover:bg-slate-200 text-zinc-500 disabled:opacity-20"
+                        title="Move Up"
+                      >
+                        <ArrowUp className="w-3.5 h-3.5" />
+                      </button>
+                      <button
+                        disabled={index === levels.length - 1}
+                        onClick={() => handleMoveLevel(index, "down")}
+                        className="p-1 rounded hover:bg-slate-200 text-zinc-500 disabled:opacity-20"
+                        title="Move Down"
+                      >
+                        <ArrowDown className="w-3.5 h-3.5" />
+                      </button>
+                      <button
+                        onClick={() => handleDeleteLevel(lvl)}
+                        className="p-1 rounded hover:bg-rose-50 text-zinc-500 hover:text-rose-600"
+                        title="Delete Level"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  )}
                 </div>
               );
             })}
@@ -316,13 +324,15 @@ export const HierarchyDesigner: React.FC<HierarchyDesignerProps> = ({ onOpenAddC
                   </div>
                 </div>
 
-                <button
-                  onClick={() => onOpenAddColumn(selectedLevel)}
-                  className="px-3 py-1.5 rounded-lg bg-zinc-100 hover:bg-white text-zinc-950 font-bold border border-zinc-200 font-semibold text-xs flex items-center space-x-1.5 shadow-sm transition"
-                >
-                  <Plus className="w-3.5 h-3.5" />
-                  <span>+ Add Column</span>
-                </button>
+                {canManageFields && (
+                  <button
+                    onClick={() => onOpenAddColumn(selectedLevel)}
+                    className="px-3 py-1.5 rounded-lg bg-zinc-100 hover:bg-white text-zinc-950 font-bold border border-zinc-200 font-semibold text-xs flex items-center space-x-1.5 shadow-sm transition"
+                  >
+                    <Plus className="w-3.5 h-3.5" />
+                    <span>Add Column</span>
+                  </button>
+                )}
               </div>
 
               {/* Dynamic Field Definitions List */}
@@ -335,7 +345,7 @@ export const HierarchyDesigner: React.FC<HierarchyDesignerProps> = ({ onOpenAddC
                   <div className="py-8 text-center text-xs text-zinc-500">Loading fields...</div>
                 ) : fields.length === 0 ? (
                   <div className="py-8 text-center text-xs text-zinc-500 border border-dashed rounded-xl">
-                    No custom fields configured for this level. Click "+ Add Column" to define one.
+                    No custom fields configured for this level.
                   </div>
                 ) : (
                   <div className="divide-y divide-slate-100 border border-zinc-800 rounded-xl overflow-hidden">
@@ -354,30 +364,32 @@ export const HierarchyDesigner: React.FC<HierarchyDesignerProps> = ({ onOpenAddC
                             )}
                           </div>
                           <div className="text-[11px] text-zinc-500 font-mono mt-0.5">
-                            key: {f.key} {f.default_value && `� default: "${f.default_value}"`}
-                            {f.options && f.options.length > 0 && ` � options: [${f.options.join(", ")}]`}
-                            {f.calculation_formula && ` � formula: ${f.calculation_formula}`}
+                            key: {f.key} {f.default_value && `• default: "${f.default_value}"`}
+                            {f.options && f.options.length > 0 && ` • options: [${f.options.join(", ")}]`}
+                            {f.calculation_formula && ` • formula: ${f.calculation_formula}`}
                           </div>
                         </div>
 
-                        <div className="flex items-center space-x-1">
-                          {onOpenEditColumn && (
+                        {canManageFields && (
+                          <div className="flex items-center space-x-1">
+                            {onOpenEditColumn && (
+                              <button
+                                onClick={() => selectedLevel && onOpenEditColumn(selectedLevel, f)}
+                                className="p-1 text-zinc-500 hover:text-zinc-200 hover:bg-zinc-800 rounded transition"
+                                title="Edit Column & Options"
+                              >
+                                <Edit2 className="w-3.5 h-3.5" />
+                              </button>
+                            )}
                             <button
-                              onClick={() => selectedLevel && onOpenEditColumn(selectedLevel, f)}
-                              className="p-1 text-zinc-500 hover:text-zinc-200 hover:bg-zinc-800 rounded transition"
-                              title="Edit Column & Options"
+                              onClick={() => handleDeleteField(f.id)}
+                              className="p-1 text-zinc-500 hover:text-rose-600 hover:bg-rose-50 rounded transition"
+                              title="Delete Field"
                             >
-                              <Edit2 className="w-3.5 h-3.5" />
+                              <Trash2 className="w-3.5 h-3.5" />
                             </button>
-                          )}
-                          <button
-                            onClick={() => handleDeleteField(f.id)}
-                            className="p-1 text-zinc-500 hover:text-rose-600 hover:bg-rose-50 rounded transition"
-                            title="Delete Field"
-                          >
-                            <Trash2 className="w-3.5 h-3.5" />
-                          </button>
-                        </div>
+                          </div>
+                        )}
                       </div>
                     ))}
                   </div>

@@ -35,11 +35,14 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
   const [recentLogs, setRecentLogs] = useState<AuditLog[]>([]);
   const [isLoadingLogs, setIsLoadingLogs] = useState(false);
 
+  const isGuest = currentUser?.role?.id === "role_guest" || currentUser?.role?.name === "Guest";
+  const canConfigureLevels = !isGuest && (currentUser?.role?.name === "Super Admin" || (currentUser?.role?.permissions?.includes("level:edit") ?? false) || (currentUser?.role?.permissions?.includes("level:create") ?? false));
+
   const totalMembers = levels.reduce((sum, lvl) => sum + (lvl.member_count || 0), 0);
 
   useEffect(() => {
     async function loadRecentActivity() {
-      if (!currentHierarchy) return;
+      if (!currentHierarchy || isGuest) return;
       try {
         setIsLoadingLogs(true);
         const res = await api.getAuditLogs({
@@ -86,13 +89,15 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
             <Network className="w-4 h-4 text-zinc-950" />
             <span>Open Tree</span>
           </button>
-          <button
-            onClick={onOpenAi}
-            className="px-3.5 py-2 bg-zinc-800 hover:bg-zinc-700 text-zinc-200 font-bold text-xs flex items-center space-x-1.5 transition cursor-pointer border border-zinc-700"
-          >
-            <Sparkles className="w-4 h-4 text-zinc-300" />
-            <span>AI Assistant</span>
-          </button>
+          {!isGuest && (
+            <button
+              onClick={onOpenAi}
+              className="px-3.5 py-2 bg-zinc-800 hover:bg-zinc-700 text-zinc-200 font-bold text-xs flex items-center space-x-1.5 transition cursor-pointer border border-zinc-700"
+            >
+              <Sparkles className="w-4 h-4 text-zinc-300" />
+              <span>AI Assistant</span>
+            </button>
+          )}
         </div>
       </div>
 
@@ -167,23 +172,25 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
       </div>
 
       {/* Main Grid: Levels Table & Activity Feed */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Left 2 Cols: Levels Summary */}
-        <div className="lg:col-span-2 bg-zinc-900 border border-zinc-800">
+      <div className={`grid grid-cols-1 ${isGuest ? "lg:grid-cols-1" : "lg:grid-cols-3"} gap-6`}>
+        {/* Left Cols: Levels Summary */}
+        <div className={`${isGuest ? "lg:col-span-1" : "lg:col-span-2"} bg-zinc-900 border border-zinc-800`}>
           <div className="p-4 border-b border-zinc-800 flex items-center justify-between">
             <div className="flex items-center space-x-2">
               <Layers className="w-4 h-4 text-zinc-400" />
               <h2 className="text-sm font-bold text-zinc-100 uppercase tracking-wide">
-                Hierarchy Levels Breakdown
+                Hierarchy Depth &amp; Structure
               </h2>
             </div>
-            <button
-              onClick={() => onNavigateTab("designer")}
-              className="text-xs text-zinc-400 hover:text-white flex items-center space-x-1 font-semibold transition"
-            >
-              <span>Manage Schema</span>
-              <ArrowRight className="w-3.5 h-3.5" />
-            </button>
+            {canConfigureLevels && (
+              <button
+                onClick={() => onNavigateTab("designer")}
+                className="text-xs text-zinc-400 hover:text-white flex items-center space-x-1 font-semibold transition cursor-pointer"
+              >
+                <span>Manage Schema</span>
+                <ArrowRight className="w-3.5 h-3.5" />
+              </button>
+            )}
           </div>
 
           <div className="overflow-x-auto">
@@ -238,7 +245,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                     <td className="py-3 px-4 text-right">
                       <button
                         onClick={() => onNavigateLevelTable(lvl)}
-                        className="px-2 py-1 bg-zinc-800 hover:bg-zinc-700 text-zinc-200 border border-zinc-700 text-[11px] font-semibold transition"
+                        className="px-2 py-1 bg-zinc-800 hover:bg-zinc-700 text-zinc-200 border border-zinc-700 text-[11px] font-semibold transition cursor-pointer"
                       >
                         View Table
                       </button>
@@ -251,51 +258,53 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
         </div>
 
         {/* Right 1 Col: Recent Audit Log Feed */}
-        <div className="bg-zinc-900 border border-zinc-800 flex flex-col">
-          <div className="p-4 border-b border-zinc-800 flex items-center justify-between">
-            <div className="flex items-center space-x-2">
-              <Shield className="w-4 h-4 text-zinc-400" />
-              <h2 className="text-sm font-bold text-zinc-100 uppercase tracking-wide">
-                Recent Security Audit
-              </h2>
+        {!isGuest && (
+          <div className="bg-zinc-900 border border-zinc-800 flex flex-col">
+            <div className="p-4 border-b border-zinc-800 flex items-center justify-between">
+              <div className="flex items-center space-x-2">
+                <Shield className="w-4 h-4 text-zinc-400" />
+                <h2 className="text-sm font-bold text-zinc-100 uppercase tracking-wide">
+                  Recent Security Audit
+                </h2>
+              </div>
+              <button
+                onClick={() => onNavigateTab("audit")}
+                className="text-xs text-zinc-400 hover:text-white flex items-center space-x-1 font-semibold transition"
+              >
+                <span>All Logs</span>
+                <ArrowRight className="w-3.5 h-3.5" />
+              </button>
             </div>
-            <button
-              onClick={() => onNavigateTab("audit")}
-              className="text-xs text-zinc-400 hover:text-white flex items-center space-x-1 font-semibold transition"
-            >
-              <span>All Logs</span>
-              <ArrowRight className="w-3.5 h-3.5" />
-            </button>
-          </div>
 
-          <div className="p-3 flex-1 overflow-y-auto divide-y divide-zinc-800/60">
-            {isLoadingLogs ? (
-              <div className="p-6 text-center text-xs text-zinc-500">Loading audit events...</div>
-            ) : recentLogs.length === 0 ? (
-              <div className="p-6 text-center text-xs text-zinc-500">No recent security events.</div>
-            ) : (
-              recentLogs.map((log) => (
-                <div key={log.id} className="py-2.5 px-2 hover:bg-zinc-850/40 transition">
-                  <div className="flex items-center justify-between">
-                    <span className="px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider bg-zinc-800 border border-zinc-700 text-zinc-300">
-                      {log.action}
-                    </span>
-                    <span className="text-[10px] text-zinc-500 font-mono">
-                      {new Date(log.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                    </span>
+            <div className="p-3 flex-1 overflow-y-auto divide-y divide-zinc-800/60">
+              {isLoadingLogs ? (
+                <div className="p-6 text-center text-xs text-zinc-500">Loading audit events...</div>
+              ) : recentLogs.length === 0 ? (
+                <div className="p-6 text-center text-xs text-zinc-500">No recent security events.</div>
+              ) : (
+                recentLogs.map((log) => (
+                  <div key={log.id} className="py-2.5 px-2 hover:bg-zinc-850/40 transition">
+                    <div className="flex items-center justify-between">
+                      <span className="px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider bg-zinc-800 border border-zinc-700 text-zinc-300">
+                        {log.action}
+                      </span>
+                      <span className="text-[10px] text-zinc-500 font-mono">
+                        {new Date(log.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                      </span>
+                    </div>
+                    <div className="mt-1 text-xs font-semibold text-zinc-200 truncate">
+                      {log.entity_type.toUpperCase()} - {log.entity_id.slice(0, 8)}
+                    </div>
+                    <div className="text-[10px] text-zinc-500 flex items-center justify-between mt-0.5">
+                      <span>By: {log.user_name || "System"}</span>
+                      <span className="capitalize">{log.entity_type}</span>
+                    </div>
                   </div>
-                  <div className="mt-1 text-xs font-semibold text-zinc-200 truncate">
-                    {log.entity_type.toUpperCase()} - {log.entity_id.slice(0, 8)}
-                  </div>
-                  <div className="text-[10px] text-zinc-500 flex items-center justify-between mt-0.5">
-                    <span>By: {log.user_name || "System"}</span>
-                    <span className="capitalize">{log.entity_type}</span>
-                  </div>
-                </div>
-              ))
-            )}
+                ))
+              )}
+            </div>
           </div>
-        </div>
+        )}
       </div>
     </div>
   );

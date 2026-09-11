@@ -49,10 +49,13 @@ export const Header: React.FC<HeaderProps> = ({
     currentUser?.role.name === "Super Admin" ||
     currentUser?.role.id === "role_super_admin";
 
+  const isGuest = currentUser?.role?.id === "role_guest" || currentUser?.role?.name === "Guest";
+
   const isSuperAdminOrAdmin =
-    isSuperAdmin ||
-    currentUser?.role.id === "role_admin" ||
-    currentUser?.role.permissions.includes("user:manage");
+    !isGuest &&
+    (isSuperAdmin ||
+      currentUser?.role.id === "role_admin" ||
+      currentUser?.role.permissions.includes("user:manage"));
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
@@ -178,7 +181,7 @@ export const Header: React.FC<HeaderProps> = ({
         )}
 
         {/* AI Assistant Button */}
-        {onOpenAiAssistant && (
+        {onOpenAiAssistant && !isGuest && (
           <button
             onClick={onOpenAiAssistant}
             className="flex items-center space-x-1.5 px-3 py-1.5 bg-zinc-100 hover:bg-white text-zinc-950 font-bold text-xs transition cursor-pointer select-none"

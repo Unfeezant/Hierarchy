@@ -104,13 +104,14 @@ export const TableView: React.FC<TableViewProps> = ({
   const [activeFilters, setActiveFilters] = useState<Record<string, string>>({});
   const [showFilterBar, setShowFilterBar] = useState(false);
 
-  const canCreate = currentUser?.role.name === "Super Admin" || currentUser?.role.permissions.includes("member:create");
-  const canEdit = currentUser?.role.name === "Super Admin" || currentUser?.role.permissions.includes("member:edit");
-  const canMove = currentUser?.role.name === "Super Admin" || currentUser?.role.permissions.includes("member:move");
-  const canDelete = currentUser?.role.name === "Super Admin" || currentUser?.role.permissions.includes("member:delete");
-  const canManageFields = currentUser?.role.name === "Super Admin" || currentUser?.role.permissions.includes("field:manage");
-  const canExport = currentUser?.role.name === "Super Admin" || currentUser?.role.permissions.includes("data:export");
-  const canImport = currentUser?.role.name === "Super Admin" || currentUser?.role.permissions.includes("data:import");
+  const isGuest = currentUser?.role?.id === "role_guest" || currentUser?.role?.name === "Guest";
+  const canCreate = currentUser?.role?.name === "Super Admin" || (currentUser?.role?.permissions?.includes("member:create") ?? false);
+  const canEdit = currentUser?.role?.name === "Super Admin" || (currentUser?.role?.permissions?.includes("member:edit") ?? false);
+  const canMove = !isGuest && (currentUser?.role?.name === "Super Admin" || (currentUser?.role?.permissions?.includes("member:move") ?? false));
+  const canDelete = !isGuest && (currentUser?.role?.name === "Super Admin" || (currentUser?.role?.permissions?.includes("member:delete") ?? false));
+  const canManageFields = !isGuest && (currentUser?.role?.name === "Super Admin" || (currentUser?.role?.permissions?.includes("field:manage") ?? false) || (currentUser?.role?.permissions?.includes("field:create") ?? false));
+  const canExport = !isGuest && (currentUser?.role?.name === "Super Admin" || (currentUser?.role?.permissions?.includes("data:export") ?? false));
+  const canImport = !isGuest && (currentUser?.role?.name === "Super Admin" || (currentUser?.role?.permissions?.includes("data:import") ?? false));
 
   useEffect(() => {
     async function loadFields() {
@@ -238,14 +239,16 @@ export const TableView: React.FC<TableViewProps> = ({
         {/* Header Actions */}
         <div className="flex items-center flex-wrap gap-2">
           {/* AI Table Summary Button */}
-          <button
-            onClick={handleOpenAiSummary}
-            className="px-3 py-1.5 bg-zinc-800 hover:bg-zinc-750 text-zinc-200 border border-zinc-700 font-bold text-xs flex items-center space-x-1.5 transition cursor-pointer"
-            title="Summarize this level dataset with AI"
-          >
-            <Sparkles className="w-3.5 h-3.5 text-zinc-300" />
-            <span>AI Summarize Table</span>
-          </button>
+          {!isGuest && (
+            <button
+              onClick={handleOpenAiSummary}
+              className="px-3 py-1.5 bg-zinc-800 hover:bg-zinc-750 text-zinc-200 border border-zinc-700 font-bold text-xs flex items-center space-x-1.5 transition cursor-pointer"
+              title="Summarize this level dataset with AI"
+            >
+              <Sparkles className="w-3.5 h-3.5 text-zinc-300" />
+              <span>AI Summarize Table</span>
+            </button>
+          )}
 
           {canCreate && (
             <button
@@ -253,7 +256,7 @@ export const TableView: React.FC<TableViewProps> = ({
               className="px-3 py-1.5 bg-zinc-100 hover:bg-white text-zinc-950 font-bold text-xs flex items-center space-x-1.5 transition cursor-pointer border border-zinc-200"
             >
               <Plus className="w-3.5 h-3.5" />
-              <span>+ Add {activeLevel.name}</span>
+              <span>Add {activeLevel.name}</span>
             </button>
           )}
 
@@ -264,7 +267,7 @@ export const TableView: React.FC<TableViewProps> = ({
               title="Add new dynamic field to this level schema"
             >
               <Plus className="w-3.5 h-3.5 text-zinc-400" />
-              <span>+ Add Column</span>
+              <span>Add Column</span>
             </button>
           )}
 
