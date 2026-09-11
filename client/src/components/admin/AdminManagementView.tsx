@@ -526,7 +526,7 @@ export const AdminManagementView: React.FC<AdminManagementViewProps> = ({ hierar
                 <span>Invitation Notice Dispatched</span>
               </p>
               <p className="text-zinc-400 text-xs leading-relaxed">
-                A simple invitation notice has been emailed to the recipient. When they open the site (<span className="text-zinc-200 font-mono">{window.location.origin}</span>) and enter their email under <strong>EMAIL OTP</strong>, they will receive their personal sign-in passcode to activate their administrator profile.
+                A simple invitation notice has been emailed to the recipient. When they open the site (<span className="text-zinc-200 font-mono">{`${window.location.origin}${window.location.pathname}`.replace(/\/+$/, "")}</span>) and enter their email under <strong>EMAIL OTP</strong>, they will receive their personal sign-in passcode to activate their administrator profile.
               </p>
             </div>
           )}
@@ -636,7 +636,8 @@ export const AdminManagementView: React.FC<AdminManagementViewProps> = ({ hierar
                   <button
                     type="button"
                     onClick={() => {
-                      const fullUrl = `${window.location.origin}?guest=${newGuestLinkResult.rawToken}`;
+                      const baseAppUrl = `${window.location.origin}${window.location.pathname}`.replace(/\/+$/, "");
+                      const fullUrl = `${baseAppUrl}/?guest=${newGuestLinkResult.rawToken}`;
                       navigator.clipboard.writeText(fullUrl);
                       setCopiedUrl(true);
                       setTimeout(() => setCopiedUrl(false), 2000);
@@ -648,7 +649,7 @@ export const AdminManagementView: React.FC<AdminManagementViewProps> = ({ hierar
                   </button>
                 </div>
                 <p className="font-mono text-zinc-300 break-all p-2.5 bg-black border border-zinc-800 select-all">
-                  {window.location.origin}?guest={newGuestLinkResult.rawToken}
+                  {`${window.location.origin}${window.location.pathname}`.replace(/\/+$/, "")}/?guest={newGuestLinkResult.rawToken}
                 </p>
                 <p className="text-zinc-500 text-xs">
                   Share this URL. When opened in any browser, the guest user will be instantly authenticated and scoped to this hierarchy branch!
