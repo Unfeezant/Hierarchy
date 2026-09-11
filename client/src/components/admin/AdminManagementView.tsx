@@ -120,6 +120,17 @@ export const AdminManagementView: React.FC<AdminManagementViewProps> = ({ hierar
     }
   }, [isSuperAdmin, activeTab]);
 
+  useEffect(() => {
+    if (hierarchies.length > 0) {
+      if (!guestHierarchyId || !hierarchies.some(h => h.id === guestHierarchyId)) {
+        setGuestHierarchyId(hierarchies[0].id);
+      }
+      if (!inviteHierarchyId || !hierarchies.some(h => h.id === inviteHierarchyId)) {
+        setInviteHierarchyId(hierarchies[0].id);
+      }
+    }
+  }, [hierarchies]);
+
   const runWithStepUpProtection = async (actionTitle: string, action: () => Promise<void>) => {
     try {
       await action();
@@ -156,11 +167,13 @@ export const AdminManagementView: React.FC<AdminManagementViewProps> = ({ hierar
     setError(null);
     setSuccess(null);
 
+    const targetHierarchyId = inviteHierarchyId || hierarchies[0]?.id || "";
+
     runWithStepUpProtection("Dispatch Administrator Invitation", async () => {
       const res = await api.inviteUser({
         email: inviteEmail.trim(),
         role_id: inviteRoleId,
-        scopes: inviteHierarchyId ? [{ id: "scope_new", user_id: "", hierarchy_id: inviteHierarchyId, member_id: null, access_level: "manager" }] : []
+        scopes: targetHierarchyId ? [{ id: "scope_new", user_id: "", hierarchy_id: targetHierarchyId, member_id: null, access_level: "manager" }] : []
       });
       setInvitationResult(res);
       setSuccess("Invitation issued successfully!");
@@ -174,6 +187,18 @@ export const AdminManagementView: React.FC<AdminManagementViewProps> = ({ hierar
     setError(null);
     setSuccess(null);
 
+    const targetHierarchyId = guestHierarchyId || hierarchies[0]?.id || "";
+
+    if (!guestLinkName.trim()) {
+      setError("Link name / purpose is required.");
+      return;
+    }
+
+    if (!targetHierarchyId) {
+      setError("Please select a target hierarchy system.");
+      return;
+    }
+
     if (!guestPassword.trim()) {
       setError("Passphrase protection is required to generate a guest link.");
       return;
@@ -182,7 +207,7 @@ export const AdminManagementView: React.FC<AdminManagementViewProps> = ({ hierar
     try {
       const res = await api.createGuestLink({
         name: guestLinkName.trim(),
-        hierarchy_id: guestHierarchyId,
+        hierarchy_id: targetHierarchyId,
         access_level: guestAccessLevel,
         password: guestPassword.trim(),
         expires_in_days: parseInt(guestExpiresDays, 10)
@@ -562,7 +587,7 @@ export const AdminManagementView: React.FC<AdminManagementViewProps> = ({ hierar
                   Target Hierarchy
                 </label>
                 <select
-                  value={guestHierarchyId}
+                  value={guestHierarchyId || hierarchies[0]?.id || ""}
                   onChange={(e) => setGuestHierarchyId(e.target.value)}
                   className="w-full bg-zinc-900 border border-zinc-800 px-3 py-2 text-sm text-zinc-100 focus:border-zinc-400 focus:outline-none rounded-none"
                 >
