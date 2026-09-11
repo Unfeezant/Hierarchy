@@ -42,25 +42,18 @@ export const BootstrapSetup: React.FC<BootstrapSetupProps> = ({ onBootstrapped }
 
     try {
       setIsLoading(true);
-      const res = await api.requestBootstrapOtp(email);
-      setStep("verify");
-      setCooldown(res.resendCooldownSeconds || 60);
-      setIsLiveSmtp(Boolean(res.isLiveSmtp));
-      if (res.devOtpCode) {
-        setDevOtpCode(res.devOtpCode);
-      }
-
-      const interval = setInterval(() => {
-        setCooldown((prev) => {
-          if (prev <= 1) {
-            clearInterval(interval);
-            return 0;
-          }
-          return prev - 1;
-        });
-      }, 1000);
+      const res = await api.confirmBootstrap({
+        email: email.trim(),
+        username: username.trim(),
+        full_name: fullName.trim(),
+        password,
+        otpCode: "DIRECT"
+      });
+      localStorage.setItem("auth_token", res.token);
+      localStorage.setItem("active_user_id", res.user.id);
+      onBootstrapped(res.user, res.token);
     } catch (err: any) {
-      setError(err.message || "Failed to dispatch verification code.");
+      setError(err.message || "Failed to initialize Super Administrator.");
     } finally {
       setIsLoading(false);
     }
@@ -234,11 +227,11 @@ export const BootstrapSetup: React.FC<BootstrapSetupProps> = ({ onBootstrapped }
                 {isLoading ? (
                   <>
                     <RefreshCw className="w-4 h-4 animate-spin" />
-                    <span>Dispatching Security OTP...</span>
+                    <span>Establishing Super Administrator...</span>
                   </>
                 ) : (
                   <>
-                    <span>Proceed to OTP Verification</span>
+                    <span>Initialize Super Administrator</span>
                     <ArrowRight className="w-4 h-4" />
                   </>
                 )}

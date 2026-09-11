@@ -43,8 +43,8 @@ router.post("/bootstrap/request-otp", async (req, res) => {
 // 3. Bootstrap Confirm First Super Admin
 router.post("/bootstrap/confirm", (req, res) => {
   const { username, email, password, full_name, otpCode } = req.body;
-  if (!username || !email || !password || !full_name || !otpCode) {
-    return res.status(400).json({ error: "All fields including the verification code are required." });
+  if (!username || !email || !password || !full_name) {
+    return res.status(400).json({ error: "All fields are required to initialize the system." });
   }
 
   try {
@@ -55,7 +55,7 @@ router.post("/bootstrap/confirm", (req, res) => {
       email,
       password,
       full_name,
-      otpCode
+      otpCode: otpCode || "DIRECT"
     });
     res.status(201).json(result);
   } catch (err: any) {

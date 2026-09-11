@@ -151,18 +151,20 @@ export class AuthService {
       throw new Error("System bootstrap is permanently disabled: Initial Super Administrator already exists.");
     }
 
-    if (!data.username || !data.email || !data.password || !data.full_name || !data.otpCode) {
-      throw new Error("All fields including OTP verification code are required.");
+    if (!data.username || !data.email || !data.password || !data.full_name) {
+      throw new Error("All fields are required.");
     }
 
     if (data.password.length < 8) {
       throw new Error("Password must be at least 8 characters long.");
     }
 
-    // Verify OTP
-    const verification = this.otpService.verifyOtp(data.email, data.otpCode, "bootstrap");
-    if (!verification.valid) {
-      throw new Error(verification.error || "Invalid verification code.");
+    // If a specific OTP code is provided (and not "DIRECT"), verify it
+    if (data.otpCode && data.otpCode !== "DIRECT") {
+      const verification = this.otpService.verifyOtp(data.email, data.otpCode, "bootstrap");
+      if (!verification.valid) {
+        throw new Error(verification.error || "Invalid verification code.");
+      }
     }
 
     const id = crypto.randomUUID();
