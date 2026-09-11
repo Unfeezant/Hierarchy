@@ -55,9 +55,9 @@ export class OtpService {
     `).run(id, normalizedEmail, codeHash, purpose, JSON.stringify(metadata), expiresAt, now.toISOString());
 
     // Dispatch OTP through EmailService (Brevo live SMTP relay or local audit)
-    await emailService.sendOtp(normalizedEmail, code, purpose);
+    const emailSent = await emailService.sendOtp(normalizedEmail, code, purpose);
 
-    const isLiveSmtp = emailService.isSmtpConfigured();
+    const isLiveSmtp = emailService.isSmtpConfigured() && emailSent;
 
     return {
       code,

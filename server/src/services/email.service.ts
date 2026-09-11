@@ -47,6 +47,9 @@ export class EmailService {
         port,
         secure: process.env.SMTP_SECURE === "true" || port === 465,
         auth: { user, pass },
+        connectionTimeout: 4000,
+        greetingTimeout: 4000,
+        socketTimeout: 4000,
       });
     }
 
@@ -76,6 +79,7 @@ export class EmailService {
     const transporter = this.getTransporter();
 
     let smtpStatus = "DEV_MODE (Logged locally)";
+    let isSuccess = false;
 
     if (transporter) {
       try {
@@ -87,6 +91,7 @@ export class EmailService {
           html: options.html,
         });
         smtpStatus = `LIVE_SMTP_SENT (MessageId: ${info.messageId})`;
+        isSuccess = true;
         console.log(`\x1b[32m[EMAIL SMTP SUCCESS]\x1b[0m Sent to ${options.to} (ID: ${info.messageId})`);
       } catch (error: any) {
         smtpStatus = `LIVE_SMTP_FAILED (${error.message})`;
@@ -103,7 +108,7 @@ export class EmailService {
       // Ignore file append error in isolated environments
     }
 
-    return true;
+    return isSuccess;
   }
 
   async sendOtp(email: string, code: string, purpose: string): Promise<boolean> {
