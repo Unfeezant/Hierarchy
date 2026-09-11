@@ -19,6 +19,7 @@ import auditRoutes from "./routes/audit.routes.js";
 import importExportRoutes from "./routes/import-export.routes.js";
 import sqlRoutes from "./routes/sql.routes.js";
 import { createAiRoutes } from "./routes/ai.routes.js";
+import { emailService } from "./services/email.service.js";
 
 dotenv.config();
 
@@ -49,9 +50,33 @@ export function createApp(dbPath?: string) {
   app.use("/api/ai", createAiRoutes(db));
 
   // Health check
-  app.get("/api/health", (req, res) => {
-    res.json({ status: "ok", timestamp: new Date().toISOString() });
+  app.get("/api/health", async (req, res) => {
+    const isConfigured = emailService.isSmtpConfigured();
+    res.json({
+      status: "ok",
+      timestamp: new Date().toISOString(),
+      smtp: {
+        configured: isConfigured,
+        host: process.env.SMTP_HOST || null,
+        port: process.env.SMTP_PORT || null,
+        from: process.env.SMTP_FROM || null,
+        userConfigured: Boolean(process.env.SMTP_USER),
+        passConfigured: Boolean(process.env.SMTP_PASS),
+      }
+    });
   });
+
+  if (emailService.isSmtpConfigured()) {
+    emailService.verifyConnection().then((v) => {
+      if (v.success) {
+        console.log("✓ [SMTP] Brevo Relay connected & verified successfully.");
+      } else {
+        console.warn("⚠ [SMTP] Brevo Relay configured but failed verification:", v.error);
+      }
+    });
+  } else {
+    console.log("ℹ [SMTP] Running in Local / Dev mode (SMTP credentials not configured in environment).");
+  }
 
   // Serve frontend build in production / deployment
   const __filename = fileURLToPath(import.meta.url);
